@@ -55,7 +55,9 @@ describe("fluxo do conversor", () => {
       name: /Intervalo entre blocos/,
     });
     fireEvent.change(screen.getByRole("textbox", { name: /Seu texto/ }), {
-      target: { value: "a".repeat(501) },
+      target: {
+        value: "Uma receita deliciosa para preparar em casa. ".repeat(8),
+      },
     });
     fireEvent.change(duration, { target: { value: "4.5" } });
     fireEvent.change(gap, { target: { value: "0.3" } });
@@ -97,12 +99,26 @@ describe("fluxo do conversor", () => {
       { timeout: 4000 },
     );
     expect(preview).toHaveTextContent("00:00:04,800 --> 00:00:09,300");
+    const originalBlocks = preview.textContent!.split("\n\n");
     expect(screen.getByRole("button", { name: /Baixar/ })).toBeEnabled();
     fireEvent.change(gap, { target: { value: "1" } });
     expect(
       screen.queryByLabelText("Prévia do arquivo SRT"),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Baixar/ })).toBeDisabled();
+    fireEvent.change(duration, { target: { value: "10" } });
+    await user.click(screen.getByRole("button", { name: "Converter em SRT" }));
+    const updatedPreview = await screen.findByLabelText(
+      "Prévia do arquivo SRT",
+      {},
+      { timeout: 4000 },
+    );
+    const updatedBlocks = updatedPreview.textContent!.split("\n\n");
+    expect(updatedBlocks.length).toBeLessThan(originalBlocks.length);
+    expect(updatedBlocks[0].split("\n")[2].length).toBeGreaterThan(
+      originalBlocks[0].split("\n")[2].length,
+    );
+    expect(updatedPreview).toHaveTextContent("00:00:11,000 --> 00:00:21,000");
     fireEvent.change(duration, { target: { value: "0" } });
     await user.click(screen.getByRole("button", { name: "Converter em SRT" }));
     expect(screen.getByRole("alert")).toHaveTextContent("duração entre");

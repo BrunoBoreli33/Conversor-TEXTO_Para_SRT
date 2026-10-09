@@ -1,5 +1,8 @@
 export const CARACTERES_POR_BLOCO = 500;
 export const PALAVRAS_MAX_BLOCO = 100;
+// Estimated reading pace; the gap is silence and does not add text capacity.
+export const CARACTERES_POR_SEGUNDO = 15;
+export const PALAVRAS_POR_SEGUNDO = 2.5;
 export const DEFAULT_BLOCK_SECONDS = 5;
 export const DEFAULT_GAP_SECONDS = 0;
 export interface SrtTiming {
@@ -22,7 +25,7 @@ export function formatarTempo(segundos: number): string {
   const milliseconds = String(totalMs % 1000).padStart(3, "0");
   return `${pad(hours)}:${pad(minutes)}:${pad(seconds)},${milliseconds}`;
 }
-// Preserve the sentence-aware splitting and apply the selected timing to every cue.
+// Size each cue for its display duration, preferring sentence boundaries.
 export async function converterParaSRT(
   texto: string,
   timing: SrtTiming,
@@ -39,6 +42,21 @@ export async function converterParaSRT(
     throw new RangeError("Invalid SRT timing");
   }
   if (!texto.trim()) return { srt: "", count: 0, duration: 0 };
+  const limiteCaracteres = Math.max(
+    1,
+    Math.min(
+      CARACTERES_POR_BLOCO,
+      Math.floor(timing.blockSeconds * CARACTERES_POR_SEGUNDO),
+    ),
+  );
+  const limitePalavras = Math.max(
+    1,
+    Math.min(
+      PALAVRAS_MAX_BLOCO,
+      Math.floor(timing.blockSeconds * PALAVRAS_POR_SEGUNDO),
+    ),
+  );
+  const tamanho = (value: string) => Array.from(value).length;
   const palavras = texto.trim().split(/\s+/);
   const blocos: string[] = [];
   let bloco = "";
@@ -50,14 +68,15 @@ export async function converterParaSRT(
     const palavra = palavras[i];
     if (
       bloco &&
-      (bloco.length + 1 + palavra.length > CARACTERES_POR_BLOCO ||
-        totalPalavras >= PALAVRAS_MAX_BLOCO)
+      (tamanho(bloco) + 1 + tamanho(palavra) > limiteCaracteres ||
+        totalPalavras >= limitePalavras)
     ) {
-      const ponto = bloco.lastIndexOf(".");
+      const ponto =
+        Array.from(bloco.matchAll(/[.!?](?=\s|$)/g)).at(-1)?.index ?? -1;
       const resto = ponto >= 0 ? bloco.slice(ponto + 1).trim() : "";
       if (
         ponto >= 0 &&
-        resto.length + 1 + palavra.length <= CARACTERES_POR_BLOCO
+        tamanho(resto) + 1 + tamanho(palavra) <= limiteCaracteres
       ) {
         emit(bloco.slice(0, ponto + 1));
         bloco = resto;
@@ -69,11 +88,11 @@ export async function converterParaSRT(
       }
     }
     // A single unusually long token must not create an empty cue or exceed the limit.
-    if (palavra.length > CARACTERES_POR_BLOCO) {
+    if (tamanho(palavra) > limiteCaracteres) {
       emit(bloco);
       const chars = Array.from(palavra);
-      for (let n = 0; n < chars.length; n += CARACTERES_POR_BLOCO)
-        emit(chars.slice(n, n + CARACTERES_POR_BLOCO).join(""));
+      for (let n = 0; n < chars.length; n += limiteCaracteres)
+        emit(chars.slice(n, n + limiteCaracteres).join(""));
       bloco = "";
       totalPalavras = 0;
     } else {

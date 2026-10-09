@@ -83,8 +83,14 @@ com as mesmas configurações.
 
 Defina na página a duração de cada bloco e o intervalo entre blocos, inclusive
 com frações de segundo. Os valores iniciais são 5 segundos por bloco e nenhum
-intervalo. Os blocos têm até
-500 caracteres e 100 palavras, com preferência por separar frases no ponto final.
+intervalo. A quantidade de texto por bloco acompanha a duração: o conversor usa
+um ritmo estimado de 15 caracteres e 2,5 palavras por segundo, com preferência
+por separar frases em pontos finais, exclamações e interrogações. Assim, 3 segundos
+comportam até 45 caracteres e 7 palavras; 10 segundos, até 150 caracteres e 25
+palavras. O intervalo apenas acrescenta uma pausa entre os blocos. Os limites
+máximos continuam sendo 500 caracteres e 100 palavras por bloco; palavras que
+sozinhas ultrapassam o limite de caracteres são divididas. A divisão é uma
+estimativa de leitura e não faz sincronização com áudio.
 Inclui progresso animado, prévia, contagem de palavras/caracteres, cópia e download
 UTF-8 de `legendas.srt`. GSAP faz a paralaxe com ponteiro e rolagem; Framer Motion
 anima os hovers. O visual respeita a preferência por movimento reduzido.
