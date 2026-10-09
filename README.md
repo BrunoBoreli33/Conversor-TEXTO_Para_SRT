@@ -5,7 +5,7 @@ Processa o roteiro no navegador, sem envio de texto para um servidor.
 
 ## Tecnologias e organização
 
-React, TypeScript, Vite, Tailwind CSS e componentes compatíveis com shadcn/ui.
+React, TypeScript, Vite, Tailwind CSS, GSAP, Framer Motion e componentes compatíveis com shadcn/ui.
 A organização segue o padrão clássico React/Vite dos projetos Lovable, com
 imports pelo alias `@/`. Novos projetos Lovable também podem usar TanStack Start;
 este conversor usa um frontend estático, com build para a Vercel.
@@ -13,6 +13,7 @@ este conversor usa um frontend estático, com build para a Vercel.
 ```text
 public/
   assets/                 # Foto temática
+  coroa.svg               # Logo e favicon
 src/
   components/
     studio/               # Interface do conversor
@@ -83,7 +84,8 @@ com as mesmas configurações.
 Cada bloco dura 30 segundos, com 10 segundos de intervalo. Os blocos têm até
 500 caracteres e 100 palavras, com preferência por separar frases no ponto final.
 Inclui progresso animado, prévia, contagem de palavras/caracteres, cópia e download
-UTF-8 de `legendas.srt`. O visual respeita a preferência por movimento reduzido.
+UTF-8 de `legendas.srt`. GSAP faz a paralaxe com ponteiro e rolagem; Framer Motion
+anima os hovers. O visual respeita a preferência por movimento reduzido.
 
 Referências: [estrutura clássica do Lovable e opções de hospedagem](https://docs.lovable.dev/tips-tricks/deployment-hosting-ownership),
 [Vite na Vercel](https://vercel.com/docs/frameworks/frontend/vite) e

@@ -5,6 +5,7 @@ import { formatarTempo } from "@/lib/srt";
 import { cn } from "@/lib/utils";
 import EmptyPreview from "./EmptyPreview";
 import ConversionProgress from "./ConversionProgress";
+import { motion } from "framer-motion";
 
 export default function Converter() {
   const {
@@ -47,7 +48,7 @@ export default function Converter() {
           <div className="input-pane">
             <div className="pane-heading">
               <label htmlFor="textoInput">Seu texto</label>
-              <button
+              <motion.button
                 className="icon-button"
                 type="button"
                 id="limparBtn"
@@ -55,9 +56,13 @@ export default function Converter() {
                 aria-label="Limpar texto e resultado"
                 disabled={busy || !text.length}
                 onClick={clear}
+                whileHover={
+                  text && !busy ? { scale: 1.16, rotate: -8 } : undefined
+                }
+                whileTap={text && !busy ? { scale: 0.9 } : undefined}
               >
                 <Icon name="trash" />
-              </button>
+              </motion.button>
             </div>
             <div className="textarea-wrap">
               <textarea
@@ -116,15 +121,17 @@ export default function Converter() {
             </div>
             <div className="output-meta">
               {result && (
-                <button
+                <motion.button
                   type="button"
                   className="copy-button"
                   id="copyBtn"
                   onClick={() => void copy()}
+                  whileHover={{ x: 3, scale: 1.05 }}
+                  whileTap={{ scale: 0.94 }}
                 >
                   <Icon name="copy" />
                   <span>{copyLabel}</span>
-                </button>
+                </motion.button>
               )}
             </div>
           </div>
@@ -132,25 +139,37 @@ export default function Converter() {
 
         <div className="action-bar">
           <div className="actions">
-            <Button
-              type="button"
-              id="downloadBtn"
-              variant="secondary"
-              disabled={!result || busy}
-              onClick={download}
+            <motion.div
+              className="motion-button"
+              whileHover={result && !busy ? { y: -3, scale: 1.025 } : undefined}
+              whileTap={result && !busy ? { scale: 0.97 } : undefined}
             >
-              <Icon name="download" /> Baixar .SRT
-            </Button>
-            <Button type="submit" id="convertBtn" disabled={busy}>
-              <span>
-                {busy
-                  ? "Convertendo…"
-                  : result
-                    ? "Converter novamente"
-                    : "Converter em SRT"}
-              </span>
-              <span className="button-spinner" aria-hidden="true" />
-            </Button>
+              <Button
+                type="button"
+                id="downloadBtn"
+                variant="secondary"
+                disabled={!result || busy}
+                onClick={download}
+              >
+                <Icon name="download" /> Baixar .SRT
+              </Button>
+            </motion.div>
+            <motion.div
+              className="motion-button"
+              whileHover={!busy ? { y: -3, scale: 1.035 } : undefined}
+              whileTap={!busy ? { scale: 0.96 } : undefined}
+            >
+              <Button type="submit" id="convertBtn" disabled={busy}>
+                <span>
+                  {busy
+                    ? "Convertendo…"
+                    : result
+                      ? "Converter novamente"
+                      : "Converter em SRT"}
+                </span>
+                <span className="button-spinner" aria-hidden="true" />
+              </Button>
+            </motion.div>
           </div>
         </div>
       </form>
