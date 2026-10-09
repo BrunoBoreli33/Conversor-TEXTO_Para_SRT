@@ -1,15 +1,31 @@
 import { useEffect, useRef, useState } from "react";
-import { converterParaSRT, pause, type SrtResult } from "@/lib/srt";
+import {
+  converterParaSRT,
+  DEFAULT_BLOCK_SECONDS,
+  DEFAULT_GAP_SECONDS,
+  pause,
+  type SrtResult,
+} from "@/lib/srt";
 
 export function useConverter() {
   const [text, setText] = useState("");
+  const [blockSeconds, setBlockSeconds] = useState(
+    String(DEFAULT_BLOCK_SECONDS),
+  );
+  const [gapSeconds, setGapSeconds] = useState(String(DEFAULT_GAP_SECONDS));
   const [result, setResult] = useState<SrtResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
+  const [settingsError, setSettingsError] = useState("");
+  const [invalidSetting, setInvalidSetting] = useState<"block" | "gap" | null>(
+    null,
+  );
   const [announcement, setAnnouncement] = useState("");
   const [copyLabel, setCopyLabel] = useState("Copiar");
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const blockRef = useRef<HTMLInputElement>(null);
+  const gapRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<HTMLPreElement>(null);
   const busyRef = useRef(false);
   const generation = useRef(0);
@@ -45,11 +61,59 @@ export function useConverter() {
       );
   }
 
+  function updateTiming(field: "block" | "gap", value: string) {
+    if (busyRef.current) return;
+    if (field === "block") setBlockSeconds(value);
+    else setGapSeconds(value);
+    setResult(null);
+    setSettingsError("");
+    setInvalidSetting(null);
+    resetCopy();
+    if (result)
+      setAnnouncement(
+        "Tempos alterados. Converta novamente para atualizar as legendas.",
+      );
+  }
+
+  function stepTiming(field: "block" | "gap", direction: -1 | 1) {
+    if (busyRef.current) return;
+    const value = field === "block" ? blockSeconds : gapSeconds;
+    const parsed = Number(value.replace(",", "."));
+    const fallback =
+      field === "block" ? DEFAULT_BLOCK_SECONDS : DEFAULT_GAP_SECONDS;
+    const current = value.trim() && Number.isFinite(parsed) ? parsed : fallback;
+    const minimum = field === "block" ? 0.001 : 0;
+    const maximum = field === "block" ? 600 : 60;
+    const next = Math.min(
+      maximum,
+      Math.max(minimum, Math.round((current + direction) * 1000) / 1000),
+    );
+    updateTiming(field, String(next));
+  }
+
   async function convert() {
     if (busyRef.current) return;
     if (!text.trim()) {
       setError("Escreva ou cole um texto para começar.");
       inputRef.current?.focus();
+      return;
+    }
+    const duration = blockSeconds.trim()
+      ? Number(blockSeconds.replace(",", "."))
+      : NaN;
+    const interval = gapSeconds.trim()
+      ? Number(gapSeconds.replace(",", "."))
+      : NaN;
+    if (!Number.isFinite(duration) || duration < 0.001 || duration > 600) {
+      setInvalidSetting("block");
+      setSettingsError("Defina uma duração entre 0,001 e 600 segundos.");
+      blockRef.current?.focus();
+      return;
+    }
+    if (!Number.isFinite(interval) || interval < 0 || interval > 60) {
+      setInvalidSetting("gap");
+      setSettingsError("Defina um intervalo entre 0 e 60 segundos.");
+      gapRef.current?.focus();
       return;
     }
     const id = ++generation.current;
@@ -58,6 +122,8 @@ export function useConverter() {
     setBusy(true);
     setResult(null);
     setError("");
+    setSettingsError("");
+    setInvalidSetting(null);
     setProgress(0);
     resetCopy();
     setAnnouncement("Conversão iniciada. Criando suas legendas.");
@@ -65,9 +131,13 @@ export function useConverter() {
       await pause(240);
       if (!active()) return;
       setProgress(12);
-      const converted = await converterParaSRT(text, (value) => {
-        if (active()) setProgress(value);
-      });
+      const converted = await converterParaSRT(
+        text,
+        { blockSeconds: duration, gapSeconds: interval },
+        (value) => {
+          if (active()) setProgress(value);
+        },
+      );
       if (!active()) return;
       await pause(280);
       if (!active()) return;
@@ -147,15 +217,23 @@ export function useConverter() {
 
   return {
     text,
+    blockSeconds,
+    gapSeconds,
     result,
     busy,
     progress,
     error,
+    settingsError,
+    invalidSetting,
     announcement,
     copyLabel,
     inputRef,
+    blockRef,
+    gapRef,
     previewRef,
     updateText,
+    updateTiming,
+    stepTiming,
     convert,
     download,
     copy,

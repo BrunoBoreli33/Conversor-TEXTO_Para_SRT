@@ -81,7 +81,9 @@ com as mesmas configurações.
 
 ## Conversão
 
-Cada bloco dura 30 segundos, com 10 segundos de intervalo. Os blocos têm até
+Defina na página a duração de cada bloco e o intervalo entre blocos, inclusive
+com frações de segundo. Os valores iniciais são 5 segundos por bloco e nenhum
+intervalo. Os blocos têm até
 500 caracteres e 100 palavras, com preferência por separar frases no ponto final.
 Inclui progresso animado, prévia, contagem de palavras/caracteres, cópia e download
 UTF-8 de `legendas.srt`. GSAP faz a paralaxe com ponteiro e rolagem; Framer Motion

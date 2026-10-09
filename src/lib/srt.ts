@@ -1,7 +1,11 @@
 export const CARACTERES_POR_BLOCO = 500;
 export const PALAVRAS_MAX_BLOCO = 100;
-export const DURACAO_BLOCO = 30;
-export const INTERVALO_ENTRE_BLOCOS = 10;
+export const DEFAULT_BLOCK_SECONDS = 5;
+export const DEFAULT_GAP_SECONDS = 0;
+export interface SrtTiming {
+  blockSeconds: number;
+  gapSeconds: number;
+}
 export interface SrtResult {
   srt: string;
   count: number;
@@ -11,13 +15,29 @@ export const pause = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
 export function formatarTempo(segundos: number): string {
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(Math.floor(segundos / 3600))}:${pad(Math.floor((segundos % 3600) / 60))}:${pad(segundos % 60)},000`;
+  const totalMs = Math.max(0, Math.round(segundos * 1000));
+  const hours = Math.floor(totalMs / 3_600_000);
+  const minutes = Math.floor((totalMs % 3_600_000) / 60_000);
+  const seconds = Math.floor((totalMs % 60_000) / 1000);
+  const milliseconds = String(totalMs % 1000).padStart(3, "0");
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)},${milliseconds}`;
 }
-// Keep the original timing and sentence-aware splitting; yield during long scripts.
+// Preserve the sentence-aware splitting and apply the selected timing to every cue.
 export async function converterParaSRT(
   texto: string,
+  timing: SrtTiming,
   onProgress: (value: number) => void = () => {},
 ): Promise<SrtResult> {
+  if (
+    !Number.isFinite(timing.blockSeconds) ||
+    timing.blockSeconds < 0.001 ||
+    timing.blockSeconds > 600 ||
+    !Number.isFinite(timing.gapSeconds) ||
+    timing.gapSeconds < 0 ||
+    timing.gapSeconds > 60
+  ) {
+    throw new RangeError("Invalid SRT timing");
+  }
   if (!texto.trim()) return { srt: "", count: 0, duration: 0 };
   const palavras = texto.trim().split(/\s+/);
   const blocos: string[] = [];
@@ -68,15 +88,17 @@ export async function converterParaSRT(
   emit(bloco);
   const cues: string[] = [];
   for (let i = 0; i < blocos.length; i++) {
-    const inicio = i * (DURACAO_BLOCO + INTERVALO_ENTRE_BLOCOS);
+    const inicio = i * (timing.blockSeconds + timing.gapSeconds);
     cues.push(
-      `${i + 1}\n${formatarTempo(inicio)} --> ${formatarTempo(inicio + DURACAO_BLOCO)}\n${blocos[i]}`,
+      `${i + 1}\n${formatarTempo(inicio)} --> ${formatarTempo(inicio + timing.blockSeconds)}\n${blocos[i]}`,
     );
     if (i % 500 === 0) await pause(0);
   }
   return {
     srt: cues.join("\n\n"),
     count: blocos.length,
-    duration: (blocos.length - 1) * 40 + 30,
+    duration:
+      (blocos.length - 1) * (timing.blockSeconds + timing.gapSeconds) +
+      timing.blockSeconds,
   };
 }

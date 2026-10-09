@@ -10,15 +10,23 @@ import { motion } from "framer-motion";
 export default function Converter() {
   const {
     text,
+    blockSeconds,
+    gapSeconds,
     result,
     busy,
     error,
+    settingsError,
+    invalidSetting,
     progress,
     announcement,
     copyLabel,
     inputRef,
+    blockRef,
+    gapRef,
     previewRef,
     updateText,
+    updateTiming,
+    stepTiming,
     convert,
     download,
     copy,
@@ -33,7 +41,6 @@ export default function Converter() {
     >
       <header className="workspace-header">
         <h1>Texto para SRT</h1>
-        <span className="timing-note">30 s/bloco · 10 s de intervalo</span>
       </header>
 
       <form
@@ -44,6 +51,106 @@ export default function Converter() {
           void convert();
         }}
       >
+        <div className="settings-bar">
+          <div className="setting-field">
+            <label htmlFor="blockSeconds">Duração por bloco</label>
+            <span className="setting-control">
+              <input
+                id="blockSeconds"
+                ref={blockRef}
+                type="number"
+                min="0.001"
+                max="600"
+                step="any"
+                inputMode="decimal"
+                value={blockSeconds}
+                onChange={(event) => updateTiming("block", event.target.value)}
+                disabled={busy}
+                aria-invalid={invalidSetting === "block"}
+                aria-describedby={
+                  settingsError && invalidSetting === "block"
+                    ? "settingsError"
+                    : undefined
+                }
+              />
+              <span>s</span>
+              <span className="setting-stepper">
+                <button
+                  type="button"
+                  className="step-button step-up"
+                  aria-label="Aumentar duração por bloco em 1 segundo"
+                  disabled={
+                    busy ||
+                    (blockSeconds.trim() !== "" && Number(blockSeconds) >= 600)
+                  }
+                  onClick={() => stepTiming("block", 1)}
+                />
+                <button
+                  type="button"
+                  className="step-button step-down"
+                  aria-label="Diminuir duração por bloco em 1 segundo"
+                  disabled={
+                    busy ||
+                    (blockSeconds.trim() !== "" &&
+                      Number(blockSeconds) <= 0.001)
+                  }
+                  onClick={() => stepTiming("block", -1)}
+                />
+              </span>
+            </span>
+          </div>
+          <div className="setting-field">
+            <label htmlFor="gapSeconds">Intervalo entre blocos</label>
+            <span className="setting-control">
+              <input
+                id="gapSeconds"
+                ref={gapRef}
+                type="number"
+                min="0"
+                max="60"
+                step="any"
+                inputMode="decimal"
+                value={gapSeconds}
+                onChange={(event) => updateTiming("gap", event.target.value)}
+                disabled={busy}
+                aria-invalid={invalidSetting === "gap"}
+                aria-describedby={
+                  settingsError && invalidSetting === "gap"
+                    ? "settingsError"
+                    : undefined
+                }
+              />
+              <span>s</span>
+              <span className="setting-stepper">
+                <button
+                  type="button"
+                  className="step-button step-up"
+                  aria-label="Aumentar intervalo entre blocos em 1 segundo"
+                  disabled={
+                    busy ||
+                    (gapSeconds.trim() !== "" && Number(gapSeconds) >= 60)
+                  }
+                  onClick={() => stepTiming("gap", 1)}
+                />
+                <button
+                  type="button"
+                  className="step-button step-down"
+                  aria-label="Diminuir intervalo entre blocos em 1 segundo"
+                  disabled={
+                    busy ||
+                    (gapSeconds.trim() !== "" && Number(gapSeconds) <= 0)
+                  }
+                  onClick={() => stepTiming("gap", -1)}
+                />
+              </span>
+            </span>
+          </div>
+          {settingsError && (
+            <p id="settingsError" className="settings-error" role="alert">
+              {settingsError}
+            </p>
+          )}
+        </div>
         <div className="editors">
           <div className="input-pane">
             <div className="pane-heading">
@@ -99,7 +206,7 @@ export default function Converter() {
               {result && (
                 <span className="result-count">
                   {result.count} {result.count === 1 ? "bloco" : "blocos"} ·{" "}
-                  {formatarTempo(result.duration).slice(0, 8)}
+                  {formatarTempo(result.duration)}
                 </span>
               )}
             </div>

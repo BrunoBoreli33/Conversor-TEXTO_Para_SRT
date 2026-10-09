@@ -14,6 +14,12 @@ describe("fluxo do conversor", () => {
       "Escreva ou cole um texto",
     );
     const input = screen.getByRole("textbox", { name: /Seu texto/ });
+    expect(
+      screen.getByRole("spinbutton", { name: /Duração por bloco/ }),
+    ).toHaveValue(5);
+    expect(
+      screen.getByRole("spinbutton", { name: /Intervalo entre blocos/ }),
+    ).toHaveValue(0);
     fireEvent.change(input, {
       target: { value: "Olá, mundo! Nosso sonho começa agora." },
     });
@@ -25,7 +31,7 @@ describe("fluxo do conversor", () => {
       () =>
         expect(
           screen.getByLabelText("Prévia do arquivo SRT"),
-        ).toHaveTextContent("00:00:00,000 --> 00:00:30,000"),
+        ).toHaveTextContent("00:00:00,000 --> 00:00:05,000"),
       { timeout: 4000 },
     );
     expect(screen.getByRole("button", { name: /Baixar/ })).toBeEnabled();
@@ -38,6 +44,69 @@ describe("fluxo do conversor", () => {
       screen.getByRole("button", { name: "Limpar texto e resultado" }),
     );
     expect(input).toHaveValue("");
+  });
+  it("aplica tempos personalizados e invalida a prévia quando eles mudam", async () => {
+    const user = userEvent.setup();
+    render(<Converter />);
+    const duration = screen.getByRole("spinbutton", {
+      name: /Duração por bloco/,
+    });
+    const gap = screen.getByRole("spinbutton", {
+      name: /Intervalo entre blocos/,
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: /Seu texto/ }), {
+      target: { value: "a".repeat(501) },
+    });
+    fireEvent.change(duration, { target: { value: "4.5" } });
+    fireEvent.change(gap, { target: { value: "0.3" } });
+    await user.click(
+      screen.getByRole("button", {
+        name: "Aumentar duração por bloco em 1 segundo",
+      }),
+    );
+    expect(duration).toHaveValue(5.5);
+    await user.click(
+      screen.getByRole("button", {
+        name: "Diminuir duração por bloco em 1 segundo",
+      }),
+    );
+    expect(duration).toHaveValue(4.5);
+    await user.click(
+      screen.getByRole("button", {
+        name: "Aumentar intervalo entre blocos em 1 segundo",
+      }),
+    );
+    expect(gap).toHaveValue(1.3);
+    await user.click(
+      screen.getByRole("button", {
+        name: "Diminuir intervalo entre blocos em 1 segundo",
+      }),
+    );
+    expect(gap).toHaveValue(0.3);
+    await user.click(screen.getByRole("button", { name: "Converter em SRT" }));
+    expect(duration).toBeDisabled();
+    expect(gap).toBeDisabled();
+    expect(
+      screen.getByRole("button", {
+        name: "Aumentar duração por bloco em 1 segundo",
+      }),
+    ).toBeDisabled();
+    const preview = await screen.findByLabelText(
+      "Prévia do arquivo SRT",
+      {},
+      { timeout: 4000 },
+    );
+    expect(preview).toHaveTextContent("00:00:04,800 --> 00:00:09,300");
+    expect(screen.getByRole("button", { name: /Baixar/ })).toBeEnabled();
+    fireEvent.change(gap, { target: { value: "1" } });
+    expect(
+      screen.queryByLabelText("Prévia do arquivo SRT"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Baixar/ })).toBeDisabled();
+    fireEvent.change(duration, { target: { value: "0" } });
+    await user.click(screen.getByRole("button", { name: "Converter em SRT" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("duração entre");
+    expect(duration).toHaveFocus();
   });
   it("copia e baixa SRT sem interpretar HTML colado", async () => {
     const user = userEvent.setup();
